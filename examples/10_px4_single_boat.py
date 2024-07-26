@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 """
-| File: 8_camera_vehicle.py
-| License: BSD-3-Clause. Copyright (c) 2024, Marcelo Jacinto. All rights reserved.
-| Description: This files serves as an example on how to build an app that makes use of the Pegasus API, 
-| where the data is send/received through mavlink, the vehicle is controled using mavlink and
-| camera data is sent to ROS2 topics at the same time.
+| File: 1_px4_single_vehicle.py
+| Author: Marcelo Jacinto (marcelo.jacinto@tecnico.ulisboa.pt)
+| License: BSD-3-Clause. Copyright (c) 2023, Marcelo Jacinto. All rights reserved.
+| Description: This files serves as an example on how to build an app that makes use of the Pegasus API to run a simulation with a single vehicle, controlled using the MAVLink control backend.
 """
 
 # Imports to start Isaac Sim from this script
@@ -24,14 +23,12 @@ from omni.isaac.core.world import World
 
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import ROBOTS, SIMULATION_ENVIRONMENTS
-from pegasus.simulator.logic.graphical_sensors.monocular_camera import MonocularCamera
-from pegasus.simulator.logic.graphical_sensors.lidar import Lidar
+from pegasus.simulator.logic.state import State
 from pegasus.simulator.logic.backends.mavlink_backend import MavlinkBackend, MavlinkBackendConfig
-from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
 from pegasus.simulator.logic.vehicles.multirotor import Multirotor, MultirotorConfig
 from pegasus.simulator.logic.interface.pegasus_interface import PegasusInterface
-
 # Auxiliary scipy and numpy modules
+import os.path
 from scipy.spatial.transform import Rotation
 
 class PegasusApp:
@@ -50,26 +47,13 @@ class PegasusApp:
         # Start the Pegasus Interface
         self.pg = PegasusInterface()
 
-        # Acquire the World, .i.e, the singleton that controls that is a one stop shop for setting up physics,
+        # Acquire the World, .i.e, the singleton that controls that is a one stop shop for setting up physics, 
         # spawning asset primitives, etc.
         self.pg._world = World(**self.pg._world_settings)
         self.world = self.pg.world
 
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
-
-        from omni.isaac.core.objects import DynamicCuboid
-        import numpy as np
-        cube_2 = self.world.scene.add(
-            DynamicCuboid(
-                prim_path="/new_cube_2",
-                name="cube_1",
-                position=np.array([-3.0, 0, 2.0]),
-                scale=np.array([1.0, 1.0, 1.0]),
-                size=1.0,
-                color=np.array([255, 0, 0]),
-            )
-        )
 
         # Create the vehicle
         # Try to spawn the selected robot in the world to the specified namespace
@@ -78,23 +62,11 @@ class PegasusApp:
         mavlink_config = MavlinkBackendConfig({
             "vehicle_id": 0,
             "px4_autolaunch": True,
+            "px4_dir": self.pg.px4_path,
+            "px4_vehicle_model": self.pg.px4_default_airframe # CHANGE this line to 'iris' if using PX4 version bellow v1.14
         })
-        config_multirotor.backends = [
-            MavlinkBackend(mavlink_config), 
-            ROS2Backend(vehicle_id=1, 
-                        config={
-                            "namespace": 'drone', 
-                            "pub_sensors": False,
-                            "pub_graphical_sensors": True,
-                            "pub_state": True,
-                            "sub_control": False,})]
+        config_multirotor.backends = [MavlinkBackend(mavlink_config)]
 
-        # Create camera graph for the existing Camera prim on the Iris model, which can be found 
-        # at the prim path `/World/quadrotor/body/Camera`. The camera prim path is the local path from the vehicle's prim path
-        # to the camera prim, to which this graph will be connected. All ROS2 topics published by this graph will have 
-        # namespace `quadrotor` and frame_id `Camera` followed by the selected camera types (`rgb`, `camera_info`).
-        config_multirotor.graphical_sensors = [MonocularCamera("camera", config={"update_rate": 60.0})]
-        
         Multirotor(
             "/World/quadrotor",
             ROBOTS['Iris'],
@@ -120,9 +92,10 @@ class PegasusApp:
 
         # The "infinite" loop
         while simulation_app.is_running() and not self.stop_sim:
+
             # Update the UI of the app and perform the physics step
             self.world.step(render=True)
-
+        
         # Cleanup and stop
         carb.log_warn("PegasusApp Simulation App is closing.")
         self.timeline.stop()
