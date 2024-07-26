@@ -41,4 +41,4 @@ _build
 build/
 install/
 log/
-**/configs.yaml
+**configs.yaml
