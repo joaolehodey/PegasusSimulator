@@ -226,7 +226,7 @@ be used by PX4. This can be achieved by:
     .. code:: bash
         
         # Go inside the config folder of the pegasus simulator extension
-        cd PegasusSimulator/extensions/pegasus/simulator/config
+        cd PegasusSimulator/extensions/pegasus.simulator/config
 
         # Open the file configs.yaml
         nano configs.yaml
@@ -235,7 +235,7 @@ be used by PX4. This can be achieved by:
         px4_default_airframe: iris
 
 You can also set the PX4 installation path inside the Pegasus Simulator GUI, as shown in the next section, or by editing
-the file ``PegasusSimulator/extensions/pegasus/simulator/config/config.yaml`` and setting the ``px4_dir`` field to the correct path.
+the file ``PegasusSimulator/extensions/pegasus.simulator/config/config.yaml`` and setting the ``px4_dir`` field to the correct path.
 
 Setting the PX4 path inside the Pegasus Simulator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
